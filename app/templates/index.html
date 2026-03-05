@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flask DevSecOps App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; }
+    header { background: #1e293b; padding: 20px 40px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.5rem; color: #60a5fa; }
+    .badge { background: #10b981; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; }
+    .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .card h2 { color: #60a5fa; margin-bottom: 16px; font-size: 1.1rem; }
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    input { flex: 1; min-width: 200px; padding: 10px 14px; background: #0f172a; border: 1px solid #475569; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; }
+    input:focus { outline: none; border-color: #3b82f6; }
+    button { padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
+    button:hover { background: #2563eb; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 14px; color: #94a3b8; font-size: 0.85rem; border-bottom: 1px solid #334155; }
+    td { padding: 12px 14px; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+    tr:hover td { background: #0f172a; }
+    .del-btn { background: #ef4444; padding: 5px 12px; font-size: 0.8rem; }
+    .del-btn:hover { background: #dc2626; }
+    .msg { padding: 10px 14px; border-radius: 8px; margin-top: 12px; font-size: 0.9rem; display: none; }
+    .msg.success { background: #064e3b; color: #6ee7b7; display: block; }
+    .msg.error   { background: #7f1d1d; color: #fca5a5; display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚀 Flask DevSecOps App</h1>
+    <span class="badge">v1.0.0</span>
+    <span class="badge" style="background:#3b82f6">2-Tier AWS</span>
+  </header>
+
+  <div class="container">
+
+    <!-- Add User Card -->
+    <div class="card">
+      <h2>➕ Add New User</h2>
+      <div class="form-row">
+        <input id="name"  type="text"  placeholder="Full Name" />
+        <input id="email" type="email" placeholder="Email Address" />
+        <button onclick="addUser()">Add User</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <!-- Users List Card -->
+    <div class="card">
+      <h2>👥 Users List</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="userTable">
+          <tr><td colspan="5" style="color:#64748b;text-align:center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    // Load all users on page load
+    async function loadUsers() {
+      const res   = await fetch("/users");
+      const users = await res.json();
+      const tbody = document.getElementById("userTable");
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b;text-align:center">No users yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${u.name}</td>
+          <td>${u.email}</td>
+          <td>${String(u.created).slice(0,19)}</td>
+          <td><button class="del-btn" onclick="deleteUser(${u.id})">Delete</button></td>
+        </tr>`).join("");
+    }
+
+    // Add new user
+    async function addUser() {
+      const name  = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      if (!name || !email) {
+        showMsg("Please enter name and email", "error");
+        return;
+      }
+      const res  = await fetch("/users", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg("✅ User added successfully!", "success");
+        document.getElementById("name").value  = "";
+        document.getElementById("email").value = "";
+        loadUsers();
+      } else {
+        showMsg("❌ " + (data.error || "Error adding user"), "error");
+      }
+    }
+
+    // Delete user
+    async function deleteUser(id) {
+      await fetch(`/users/${id}`, { method: "DELETE" });
+      loadUsers();
+    }
+
+    // Show message
+    function showMsg(text, type) {
+      const msg     = document.getElementById("msg");
+      msg.textContent = text;
+      msg.className   = "msg " + type;
+      setTimeout(() => { msg.className = "msg"; }, 3000);
+    }
+
+    // Load users when page opens
+    loadUsers();
+  </script>
+</body>
+</html>
+

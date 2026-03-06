@@ -91,10 +91,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: rootpass
-          MYSQL_DATABASE: flaskdb
-          MYSQL_USER: flaskuser
-          MYSQL_PASSWORD: FlaskPass123
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         ports:
           - 3306:3306
         options: >-
@@ -121,9 +121,9 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
-          DB_NAME: flaskdb
-          DB_USER: flaskuser
-          DB_PASSWORD: FlaskPass123
+          DB_NAME: ${{ secrets.MYSQL_DATABASE }}
+          DB_USER: ${{ secrets.MYSQL_USER }}
+          DB_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           pytest app/tests/ -v --cov=app --cov-report=xml --cov-report=term || true
 
@@ -201,23 +201,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Navigate to project directory
             cd ~/PythonFlask-DevSecOps-project- || git clone ${{ github.server_url }}/${{ github.repository }}.git ~/PythonFlask-DevSecOps-project-
 
-            # Pull latest code
             git pull origin master
 
-            # Login to Docker Hub
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            # Pull latest image
             docker pull ${{ env.DOCKER_IMAGE }}:latest
 
-            # Restart services with new image
+            export MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+            export MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+            export MYSQL_USER=${{ secrets.MYSQL_USER }}
+            export MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+
             docker-compose down
             docker-compose up -d
 
-            # Clean up old images
             docker image prune -f
 
             echo "✅ Deployment complete!"
